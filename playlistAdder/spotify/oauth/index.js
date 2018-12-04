@@ -22,4 +22,4 @@ async function openSpotifyOauth () {
   listener({ callbackUrl: callbackUrl, state: spotifyState })
 }
 
-openSpotifyOauth()
+module.exports = openSpotifyOauth

@@ -1,14 +1,12 @@
-const { promisify } = require('util')
-const writeFile = promisify(require('fs').writeFile)
 const express = require('express')
 
 const app = express()
 const port = 8888
 let server
+let tokenStore
 let callbackUrl, state
 
 async function oauthPage (req, res, next) {
-  const authFile = '../auth.json'
   const authDetails = Object.assign({ callbackUrl: callbackUrl }, req.query)
   if (authDetails.state !== state) {
     const thrownError = new Error('Provided state does not match requested state')
@@ -18,13 +16,14 @@ async function oauthPage (req, res, next) {
     }
     throw thrownError
   }
+
   try {
-    await writeFile(authFile, JSON.stringify(authDetails, null, 2))
+    await tokenStore.updateToken(authDetails)
   } catch (e) {
     console.error(e)
   }
   const pageContent = `
-  <p>Saved authentication details to ${authFile}</p>
+  <p>Saved authentication details to tokenStore</p>
   <pre>${JSON.stringify(authDetails, null, 2)}</pre>
   `
   res.send(pageContent)
@@ -35,7 +34,9 @@ async function oauthPage (req, res, next) {
 
 app.get('/oauth/', oauthPage)
 
-function start (options = {}) {
+async function start (options = {}) {
+  tokenStore = await require('../tokenStore')()
+
   if (!options.hasOwnProperty('callbackUrl')) throw new Error('Must provide \'callbackUrl\'')
   callbackUrl = options.callbackUrl
   if (options.hasOwnProperty('state')) state = options.state

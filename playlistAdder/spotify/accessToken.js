@@ -1,6 +1,6 @@
 const axios = require('axios')
-const clientAuth = require('../../auth.json')
 const errorHandler = require('./errorHandler')
+const oauth = require('./oauth')
 
 let tokenStore
 
@@ -29,10 +29,11 @@ async function getAppToken () {
 }
 
 async function getUserToken () {
+  const token = tokenStore.getToken()
   const tokenReq = generateRequest({
     grant_type: 'authorization_code',
-    code: clientAuth.code,
-    redirect_uri: clientAuth.callbackUrl
+    code: token.code,
+    redirect_uri: token.callbackUrl
   })
 
   console.log(tokenReq)
@@ -67,6 +68,7 @@ function getAuthHeader () {
 
 module.exports = async () => {
   tokenStore = await require('./tokenStore')()
+  if (!tokenStore.getToken().hasOwnProperty('code')) { await oauth() }
   if (!tokenStore.getToken().hasOwnProperty('access_token')) await getUserToken()
   return {
     getAuthHeader

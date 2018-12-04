@@ -4,7 +4,7 @@ const fs = require('fs')
 const readFile = promisify(fs.readFile)
 const writeFile = promisify(fs.writeFile)
 
-const tokenFile = `${__dirname}/../../token.json`
+const tokenFile = `${__dirname}/token.json`
 
 let token = {}
 
