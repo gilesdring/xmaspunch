@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "express": "^4.16.4",
+    "opn": "^5.4.0",
     "uuid": "^3.3.2"
   }
 }
