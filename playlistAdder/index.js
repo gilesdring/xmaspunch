@@ -3,43 +3,54 @@ const spotify = require('./spotify')
 const playlist = '6dQi4XpLzXMG2k6JsaY99s'
 const hopper = '7q4ioguHwE10jNUcwOMZ3N'
 
-async function getHopperTracks (limit = 24) {
-  const spotifyApi = await spotify()
-  const hopperList = (await spotifyApi.getPlaylistTracks(hopper)).items
+const steve = '1Vht8pNf2IUJQRC6fBCiKw'
+const joelle = '5BnakSCX1it9yVtbiBGX3j'
 
-  return hopperList.slice(0, limit)
+const errorHandler = (error) => {
+  console.error(error.message)
+  throw error
+}
+
+async function getTracksFromPlaylist (id) {
+  const spotifyApi = await spotify()
+  const tracks = (await spotifyApi.getPlaylistTracks(id)).items.map(_ => _.track)
+  return tracks
+}
+
+async function addTrack (track) {
+  const spotifyApi = await spotify()
+  const added = await spotifyApi.addTrackToPlaylist(track.id, playlist)
+  if (!added.hasOwnProperty('snapshot_id')) console.error(added)
+}
+
+async function getShortlist (limit = 24) {
+  const tracks = await checkTracks(await getTracksFromPlaylist(hopper))
+  const currentIds = (await getTracksFromPlaylist(playlist)).map(_ => _.id)
+  return tracks.slice(0, limit).filter(_ => !currentIds.includes(_.id))
+}
+
+async function checkTracks (tracks = []) {
+  const offLimits = await getTracksFromPlaylist(steve)
+  offLimits.concat(await getTracksFromPlaylist(joelle))
+  const rejectIds = offLimits.sort((x, y) => x.name > y.name).map(_ => _.id)
+  return tracks.filter((_) => !rejectIds.includes(_.id))
 }
 
 async function main () {
-  const spotifyApi = await spotify()
+  const shortlist = await getShortlist()
 
-  const playlistTracks = (await spotifyApi.getPlaylistTracks(playlist)).items
-  const currentIds = playlistTracks.map((track) => track.track.id)
+  console.log(['Potential Tracks:'].concat(shortlist.map(_ => _.name))
+    .join('\n   * '))
 
-  const hopperTracks = await getHopperTracks()
-  const potentialTracks = hopperTracks
-    .filter((x) => !currentIds.includes(x.track.id))
+  if (shortlist.length === 0) throw new Error(`No tracks available in playlist ${hopper}`)
 
-  if (playlistTracks.length > 0) {
-    console.log(`Current tracks:
-    * ${playlistTracks.map(_ => _.track.name).join('\n    * ')}
-    `)
-  }
+  const selected = Math.floor(Math.random() * Math.floor(shortlist.length))
 
-  if (potentialTracks.length > 0) {
-    console.log(`Potential tracks:
-    * ${potentialTracks.map(_ => _.track.name).join('\n    * ')}
-    `)
-  } else {
-    if (potentialTracks.length === 0) throw new Error('No possible tracks')
-  }
+  const theTrack = shortlist[selected]
 
-  const selected = Math.floor(Math.random() * Math.floor(potentialTracks.length))
-  const track = potentialTracks[selected].track
-  console.log(`Selected track ${selected}: ${track.name} (id = ${track.id})`)
+  console.log(`Selected track ${selected}: ${theTrack.name} (id = ${theTrack.id})`)
 
-  const added = await spotifyApi.addTrackToPlaylist(track.id, playlist)
-  console.log(added)
+  addTrack(theTrack, playlist)
 }
 
-main().catch(console.error)
+main().catch(errorHandler)

@@ -3,6 +3,7 @@ const errorHandler = require('./errorHandler')
 const oauth = require('./oauth')
 
 let tokenStore
+let authType
 
 const authDetails = Buffer
   .from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`)
@@ -19,34 +20,45 @@ function generateRequest (params = {}) {
   }
 }
 
-async function getAppToken () {
-  const signinRequest = generateRequest({ grant_type: 'client_credentials' })
-
-  accessToken = await axios(signinRequest)
-    .then((res) => res.data.access_token)
-    .catch(errorHandler)
-  return accessToken
+async function requestToken () {
+  const fn = authType === 'user' ? requestUserToken : requestAppToken
+  await fn()
 }
 
-async function getUserToken () {
-  const token = tokenStore.getToken()
-  const tokenReq = generateRequest({
-    grant_type: 'authorization_code',
-    code: token.code,
-    redirect_uri: token.callbackUrl
-  })
+async function requestAppToken () {
+  const signinRequest = generateRequest({ grant_type: 'client_credentials' })
 
-  console.log(tokenReq)
-
-  let auth
+  let tokenResponse
 
   try {
-    auth = await axios(tokenReq)
+    tokenResponse = await axios(signinRequest)
   } catch (error) {
-    console.error(error.response.data)
-    throw error
+    errorHandler(error)
   }
-  tokenStore.updateToken(auth.data)
+
+  console.log(tokenResponse.data)
+}
+
+async function requestUserToken () {
+  if (!tokenStore.getToken().hasOwnProperty('code')) {
+    await oauth()
+  } else {
+    const token = tokenStore.getToken()
+    const tokenReq = generateRequest({
+      grant_type: 'authorization_code',
+      code: token.code,
+      redirect_uri: token.callbackUrl
+    })
+
+    let auth
+
+    try {
+      auth = await axios(tokenReq)
+    } catch (error) {
+      errorHandler(error)
+    }
+    tokenStore.updateToken(auth.data)
+  }
 }
 
 async function updateToken () {
@@ -59,17 +71,25 @@ async function updateToken () {
   tokenStore.updateToken(result.data)
 }
 
-function getAuthHeader () {
+async function getAuthHeader () {
+  if (!tokenStore.getToken().hasOwnProperty('access_token')) await requestToken()
   const token = tokenStore.getToken()
   const authHeader = `${token.token_type} ${token.access_token}`
   updateToken()
   return authHeader
 }
 
-module.exports = async () => {
+async function setAuthType (type) {
+  authType = type
+  const token = await tokenStore.getToken()
+  if (token.authType === authType) return
+  // remove access_token, refresh_token, token_type, expires_in, scope
+  tokenStore.updateToken({ authType: type })
+}
+
+module.exports = async (userAuth = true) => {
   tokenStore = await require('./tokenStore')()
-  if (!tokenStore.getToken().hasOwnProperty('code')) { await oauth() }
-  if (!tokenStore.getToken().hasOwnProperty('access_token')) await getUserToken()
+  setAuthType(userAuth ? 'user' : 'app')
   return {
     getAuthHeader
   }

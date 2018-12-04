@@ -13,7 +13,6 @@ async function readToken () {
     token = JSON.parse(await readFile(tokenFile, 'utf8'))
   } catch (error) {
     if (error.code !== 'ENOENT') throw error
-    console.error(error)
     token = {}
     writeToken()
   }
