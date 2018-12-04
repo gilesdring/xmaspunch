@@ -18,9 +18,9 @@ function spotifyOauth (req, res, next) {
     response_type: 'code',
     redirect_uri: callbackUrl,
     state: spotifyState,
+    scope: 'playlist-modify-public',
     show_dialog: true
   }).toString()
-  // res.cookie('spotify_state', value )
   res.redirect(redirectUrl)
 }
 
