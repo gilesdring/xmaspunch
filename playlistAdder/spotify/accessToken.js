@@ -1,6 +1,7 @@
 const axios = require('axios')
 const errorHandler = require('./errorHandler')
 const oauth = require('./oauth')
+const doCall = require('./doCall')
 
 let tokenStore
 let authType
@@ -8,8 +9,6 @@ let authType
 const authDetails = Buffer
   .from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`)
   .toString('base64')
-
-let accessToken
 
 function generateRequest (params = {}) {
   return {
@@ -22,7 +21,11 @@ function generateRequest (params = {}) {
 
 async function requestToken () {
   const fn = authType === 'user' ? requestUserToken : requestAppToken
-  await fn()
+  try {
+    await fn()
+  } catch (error) {
+    errorHandler(error)
+  }
 }
 
 async function requestAppToken () {
@@ -31,7 +34,7 @@ async function requestAppToken () {
   let tokenResponse
 
   try {
-    tokenResponse = await axios(signinRequest)
+    tokenResponse = await doCall(signinRequest)
   } catch (error) {
     errorHandler(error)
   }
@@ -40,25 +43,25 @@ async function requestAppToken () {
 }
 
 async function requestUserToken () {
-  if (!tokenStore.getToken().hasOwnProperty('code')) {
-    await oauth()
-  } else {
-    const token = tokenStore.getToken()
-    const tokenReq = generateRequest({
-      grant_type: 'authorization_code',
-      code: token.code,
-      redirect_uri: token.callbackUrl
-    })
+  if (!tokenStore.getToken().hasOwnProperty('code')) await oauth()
 
-    let auth
+  const token = tokenStore.getToken()
+  const tokenReq = generateRequest({
+    grant_type: 'authorization_code',
+    code: token.code,
+    redirect_uri: token.callbackUrl
+  })
 
-    try {
-      auth = await axios(tokenReq)
-    } catch (error) {
-      errorHandler(error)
-    }
-    tokenStore.updateToken(auth.data)
+  let auth
+
+  try {
+    auth = await axios(tokenReq)
+  } catch (error) {
+    if (error.response.data.error !== 'invalid_grant') errorHandler(error)
+    await updateToken()
+    auth = await axios(tokenReq).catch(errorHandler)
   }
+  tokenStore.updateToken(auth.data)
 }
 
 async function updateToken () {
@@ -88,7 +91,12 @@ async function setAuthType (type) {
 }
 
 module.exports = async (userAuth = true) => {
-  tokenStore = await require('./tokenStore')()
+  try {
+    tokenStore = await require('./tokenStore')()
+  } catch (error) {
+    console.error(error)
+    throw error
+  }
   setAuthType(userAuth ? 'user' : 'app')
   return {
     getAuthHeader

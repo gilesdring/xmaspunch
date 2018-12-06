@@ -15,11 +15,22 @@ async function openSpotifyOauth () {
     redirect_uri: callbackUrl,
     state: spotifyState,
     scope: 'playlist-modify-public',
-    show_dialog: true
+    show_dialog: false
   }).toString()
 
   await opn(redirectUrl.toString(), { wait: false })
-  listener({ callbackUrl: callbackUrl, state: spotifyState })
+  const server = await listener({ callbackUrl: callbackUrl, state: spotifyState })
+
+  let waiting = true
+  server.on('close', () => {
+    waiting = false
+    console.log('Closed')
+  })
+  let count = 0
+  while (waiting) {
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    if (count++ > 10) waiting = false
+  }
 }
 
 module.exports = openSpotifyOauth

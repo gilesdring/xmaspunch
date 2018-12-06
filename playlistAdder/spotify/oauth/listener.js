@@ -27,7 +27,7 @@ async function oauthPage (req, res, next) {
   <pre>${JSON.stringify(authDetails, null, 2)}</pre>
   `
   res.send(pageContent)
-  const timeout = 1000
+  const timeout = 100
   console.log(`Closing server in ${timeout / 1000}s`)
   setTimeout(function () { server.close() }, timeout)
 }
@@ -40,7 +40,8 @@ async function start (options = {}) {
   if (!options.hasOwnProperty('callbackUrl')) throw new Error('Must provide \'callbackUrl\'')
   callbackUrl = options.callbackUrl
   if (options.hasOwnProperty('state')) state = options.state
-  server = app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+  server = await app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+  return server
 }
 
 module.exports = start
