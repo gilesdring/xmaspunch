@@ -1,7 +1,10 @@
 const spotify = require('./spotify')
 
-const playlist = '6dQi4XpLzXMG2k6JsaY99s'
+const testPlaylist = '6dQi4XpLzXMG2k6JsaY99s'
+const realPlaylist = '5gHEoY3wy1DORBleAmNurm'
+
 const hopper = '7q4ioguHwE10jNUcwOMZ3N'
+const playlist = testPlaylist
 
 const steve = '1Vht8pNf2IUJQRC6fBCiKw'
 const joelle = '5BnakSCX1it9yVtbiBGX3j'
@@ -50,7 +53,7 @@ async function main () {
 
   console.log(`Selected track ${selected}: ${theTrack.name} (id = ${theTrack.id})`)
 
-  addTrack(theTrack, playlist)
+  if (process.env.ADD_TRACK) addTrack(theTrack, playlist)
 }
 
 main().catch(errorHandler)
