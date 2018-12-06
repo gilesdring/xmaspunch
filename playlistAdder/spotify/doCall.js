@@ -1,14 +1,9 @@
 const axios = require('axios')
 const errorHandler = require('./errorHandler')
 
-async function doCall (req) {
-  let res
-  try {
-    res = await axios(req)
-  } catch (error) {
-    errorHandler(error)
-  }
-  return res
+function doCall (req) {
+  req.timeout = 10000
+  return axios(req).catch(errorHandler)
 }
 
 module.exports = doCall
