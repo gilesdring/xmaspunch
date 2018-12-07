@@ -77,7 +77,6 @@ async function getAuthHeader () {
   if (!tokenStore.getToken().hasOwnProperty('access_token')) await requestToken()
   const token = tokenStore.getToken()
   const authHeader = `${token.token_type} ${token.access_token}`
-  updateToken()
   return authHeader
 }
 
@@ -85,7 +84,7 @@ async function setAuthType (type) {
   authType = type
   const token = await tokenStore.getToken()
   if (token.authType === authType) return
-  // remove access_token, refresh_token, token_type, expires_in, scope
+  // TODO remove access_token, refresh_token, token_type, expires_in, scope
   tokenStore.updateToken({ authType: type })
 }
 
@@ -98,6 +97,6 @@ module.exports = async (userAuth = true) => {
   }
   setAuthType(userAuth ? 'user' : 'app')
   return {
-    getAuthHeader
+    getAuthHeader, updateToken
   }
 }

@@ -1,5 +1,5 @@
 module.exports = (error) => {
-  const thrownError = new Error('Error in spotifyApi')
-  thrownError.data = error.response.data
-  throw thrownError
+  console.error('Error in spotifyApi')
+  console.error(error.response.data)
+  process.exit(1)
 }
