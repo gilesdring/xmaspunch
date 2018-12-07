@@ -1,6 +1,6 @@
 const errorHandler = require('./errorHandler')
 const oauth = require('./oauth')
-const doCall = require('./doCall')
+const axios = require('axios')
 
 let tokenStore
 let authType
@@ -33,7 +33,7 @@ async function requestAppToken () {
   let tokenResponse
 
   try {
-    tokenResponse = await doCall(signinRequest)
+    tokenResponse = await axios(signinRequest)
   } catch (error) {
     errorHandler(error)
   }
@@ -54,11 +54,11 @@ async function requestUserToken () {
   let auth
 
   try {
-    auth = await doCall(tokenReq)
+    auth = await axios(tokenReq)
   } catch (error) {
     if (error.response.data.error !== 'invalid_grant') errorHandler(error)
     await updateToken()
-    auth = await doCall(tokenReq).catch(errorHandler)
+    auth = await axios(tokenReq).catch(errorHandler)
   }
   tokenStore.updateToken(auth.data)
 }
@@ -68,7 +68,7 @@ async function updateToken () {
     grant_type: 'refresh_token',
     refresh_token: tokenStore.getToken().refresh_token
   })
-  const result = await doCall(tokenReq)
+  const result = await axios(tokenReq)
 
   tokenStore.updateToken(result.data)
 }
